@@ -32,9 +32,9 @@ resource "aws_s3_bucket" "datalake-s3" {
 
 # EMR Cluster to move & manipulate the data
 resource "aws_emr_cluster" "cluster" {
-  name          = "galmis-batch-de-project-emr_v2"
+  name          = "galmis-batch-de-project-emr_v3"
   release_label = "emr-6.2.1"
-  applications  = ["Spark"]
+  applications  = ["Hadoop","Spark"]
   scale_down_behavior = "TERMINATE_AT_TASK_COMPLETION"
   termination_protection            = false
   keep_job_flow_alive_when_no_steps = true
