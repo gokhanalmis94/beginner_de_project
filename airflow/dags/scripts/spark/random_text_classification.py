@@ -38,7 +38,7 @@ def random_text_classifier(input_loc: str, output_loc: str, run_id: str) -> None
     )
     df_fin = df_out.withColumn("insert_date", lit(run_id))
     # parquet is a popular column storage format, we use it here
-    df_fin.write.mode("overwrite").parquet(output_loc)
+    df_fin.write.mode("overwrite").csv(output_loc)
 
 
 if __name__ == "__main__":
