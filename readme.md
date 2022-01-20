@@ -48,6 +48,8 @@ sleep 300
 terraform init
 terraform apply -auto-approve
 ```
+- Follow [this documentation of Snowflake](https://docs.snowflake.com/en/user-guide/tables-external-s3.html) to create a storage integration and stage from S3
+- Run the SQL queries in /snowflake/ to create the required Snowflake storage integration, stage and tables. Skip storage integration and stage if you already did them in the previous phase.
 - Adding S3 bucket name to Airflow variables 
 ```
 docker exec -d airflow_airflow-webserver_1 airflow variables set BUCKET $(terraform output bucket_name)
@@ -64,3 +66,10 @@ docker exec -d airflow_airflow-webserver_1 airflow connections add 'postgres_def
 ```
 docker exec -d airflow_airflow-webserver_1 airflow connections add 'aws_default' --conn-type 'aws' --conn-login $(aws configure get aws_access_key_id) --conn-password $(aws configure get aws_secret_access_key) --conn-extra '{"region_name":"eu-west-1", "role_arn":"$(aws configure get role_arn)"}'
 ```
+
+
+### Current Issues to be fixed
+- EMR cluster does not scale down as intended
+- Pipeline gets all data from user_purchases Postgres table every time. If I find time, queries will be changed to move only a subset of the data.
+- IAM role and policy Snowflake storage integration created manually while following Snowflake guide, not from Terraform
+- The last step of updating the OLAP table in Snowflake does not work yet. The connection needs to be figured out.
