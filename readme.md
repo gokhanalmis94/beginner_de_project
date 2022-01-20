@@ -35,7 +35,7 @@ Creating a complex data pipeline with multiple components mimicking real-word da
 `docker exec -d airflow_airflow-webserver_1 airflow connections add 'aws_default' --conn-type 'aws' --conn-login $(aws configure get aws_access_key_id) --conn-password $(aws configure get aws_secret_access_key) --conn-extra '{"region_name":"eu-west-1", "role_arn":"$(aws configure get role_arn)"}'`
 
 ### Original Pipeline from Joseph Machado's project
-![Original Pipeline] (https://www.startdataengineering.com/images/de_project_for_beginners/de_proj_design.png)
+![Original Pipeline](https://www.startdataengineering.com/images/de_project_for_beginners/de_proj_design.png)
 
 ### What is changed in this version
 - Infrastructure is created with Terraform rather than bash script
