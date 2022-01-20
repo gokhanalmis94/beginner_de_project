@@ -8,6 +8,8 @@ from airflow.models import Variable
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
+from airflow.contrib.operators.snowflake_operator import SnowflakeOperator
 
 from utils import _local_to_s3, run_redshift_external_query
 
@@ -60,21 +62,6 @@ user_purchase_to_stage_data_lake = PythonOperator(
     },
 )
 
-# NOT NEEDED #
-"""
-user_purchase_stage_data_lake_to_stage_tbl = PythonOperator(
-    dag=dag,
-    task_id="user_purchase_stage_data_lake_to_stage_tbl",
-    python_callable=run_redshift_external_query,
-    op_kwargs={
-        "qry": "alter table spectrum.user_purchase_staging add if not exists partition(insert_date='{{ ds }}') \
-            location 's3://"
-        + BUCKET_NAME
-        + "/stage/user_purchase/{{ ds }}'",
-    },
-)
-"""
-
 movie_review_to_raw_data_lake = PythonOperator(
     dag=dag,
     task_id="movie_review_to_raw_data_lake",
@@ -124,11 +111,22 @@ wait_for_movie_classification_transformation = EmrStepSensor(
     depends_on_past=True,
 )
 
-generate_user_behavior_metric = PostgresOperator(
+wait_for_external_tables_refresh = BashOperator(
+        dag = dag,
+        task_id='wait_for_external_tables_refresh',
+        depends_on_past=True,
+        bash_command='sleep 300',
+        retries=3,
+    )
+
+generate_user_behavior_metric = SnowflakeOperator(
+    task_id='generate_user_behavior_metric',
     dag=dag,
-    task_id="generate_user_behavior_metric",
-    sql="scripts/sql/generate_user_behavior_metric.sql",
-    postgres_conn_id="redshift",
+    sql=CREATE_TABLE_SQL_STRING,
+    warehouse=SNOWFLAKE_WAREHOUSE,
+    database=SNOWFLAKE_DATABASE,
+    schema=SNOWFLAKE_SCHEMA,
+    role=SNOWFLAKE_ROLE,
 )
 
 end_of_data_pipeline = DummyOperator(task_id="end_of_data_pipeline", dag=dag)
@@ -141,4 +139,4 @@ extract_user_purchase_data >> user_purchase_to_stage_data_lake
 [
     user_purchase_to_stage_data_lake,
     wait_for_movie_classification_transformation,
-] >> generate_user_behavior_metric >> end_of_data_pipeline
+] >> wait_for_external_tables_refresh >> generate_user_behavior_metric >> end_of_data_pipeline
