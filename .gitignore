@@ -3,4 +3,6 @@ terraform.tfstate*
 *.log
 data.zip
 .env
-
+*.p8
+*.csv
+.DS_Store

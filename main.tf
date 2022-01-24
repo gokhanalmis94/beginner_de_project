@@ -32,7 +32,7 @@ resource "aws_s3_bucket" "datalake-s3" {
 
 # EMR Cluster to move & manipulate the data
 resource "aws_emr_cluster" "cluster" {
-  name          = "galmis-batch-de-project-emr_v3"
+  name          = "galmis-batch-de-project-emr_v4"
   release_label = "emr-6.2.1"
   applications  = ["Hadoop","Spark"]
   scale_down_behavior = "TERMINATE_AT_TASK_COMPLETION"
@@ -44,12 +44,12 @@ resource "aws_emr_cluster" "cluster" {
     subnet_id                         = aws_subnet.main.id
     emr_managed_master_security_group = aws_security_group.allow_access.id
     emr_managed_slave_security_group  = aws_security_group.allow_access.id
-    instance_profile                  = aws_iam_instance_profile.emr_profile.arn
+    instance_profile                  = "arn:aws:iam::301581146302:instance-profile/EMR_EC2_DefaultRole"
   }
 
   master_instance_group {
     name = "Master - 1"
-    instance_type = "m5.xlarge"
+    instance_type = "m4.large"
     ebs_config {
       size                 = "32"
       type                 = "gp2"
@@ -58,7 +58,7 @@ resource "aws_emr_cluster" "cluster" {
   }
 
   core_instance_group {
-    instance_type  = "m5.xlarge"
+    instance_type  = "m4.large"
     instance_count = 2
 
     ebs_config {
@@ -97,6 +97,29 @@ resource "aws_emr_cluster" "cluster" {
         "Unit": "PERCENT"
       }
     }
+  },
+  {
+    "Name": "Default-scale-in",
+    "Trigger": {
+        "CloudWatchAlarmDefinition": {
+            "MetricName": "YARNMemoryAvailablePercentage",
+            "Unit": "PERCENT",
+            "Namespace": "AWS/ElasticMapReduce",
+            "Threshold": 75,
+            "EvaluationPeriods": 1,
+            "Period": 300,
+            "ComparisonOperator": "GREATER_THAN",
+            "Statistic": "AVERAGE"
+        }
+    },
+    "Description": "",
+    "Action": {
+        "SimpleScalingPolicyConfiguration": {
+            "CoolDown": 300,
+            "AdjustmentType": "CHANGE_IN_CAPACITY",
+            "ScalingAdjustment": -1
+        }
+    }
   }
 ]
 }
@@ -118,8 +141,6 @@ EOF
   }
 
 
-  service_role = aws_iam_role.iam_emr_service_role.arn
-  autoscaling_role = aws_iam_role.iam_emr_autoscaling_role.arn
+  service_role = "arn:aws:iam::301581146302:role/EMR_DefaultRole"
+  autoscaling_role = "arn:aws:iam::301581146302:role/EMR_AutoScaling_DefaultRole"
 }
-
-
