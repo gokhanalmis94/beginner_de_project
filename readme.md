@@ -23,7 +23,7 @@ The pipeline consists of two data resources: user_purchases and movie_reviews.
 - Docker with Docker-compose and at least 4GB of RAM
 - AWS account with AWS CLI installed and configured
 - Snowflake account
-- Terraform installed
+- Terraform CLI
 
 #### Installation Steps
 - Get the raw data from original project's bucket and unpack
@@ -35,10 +35,12 @@ unzip data.zip
 ```
 mkdir airflow/logs
 mkdir airflow/data
+mkdir airflow/temp
 mv data/* airflow/data/
 ```
 - Start Airflow containers and wait 5mins for a healthy state
 ```
+docker-compose build
 docker-compose up airflow-init
 docker-compose up -d
 sleep 300
@@ -62,14 +64,16 @@ docker exec -d airflow_airflow-webserver_1 airflow variables set EMR_ID $(terraf
 ```
 docker exec -d airflow_airflow-webserver_1 airflow connections add 'postgres_default' --conn-type 'Postgres' --conn-login 'airflow' --conn-password 'airflow' --conn-host 'localhost' --conn-port 5432 --conn-schema 'airflow'
 ```
-- Adding AWS connection to Airflow connections
+- Adding AWS connection to Airflow connections. Replace {AWS_ROLE_ARN} with your own role ARN
 ```
-docker exec -d airflow_airflow-webserver_1 airflow connections add 'aws_default' --conn-type 'aws' --conn-login $(aws configure get aws_access_key_id) --conn-password $(aws configure get aws_secret_access_key) --conn-extra '{"region_name":"eu-west-1", "role_arn":"$(aws configure get role_arn)"}'
+docker exec -d airflow_airflow-webserver_1 airflow connections add 'aws_default' --conn-type 'aws' --conn-login $(aws configure get aws_access_key_id) --conn-password $(aws configure get aws_secret_access_key) --conn-extra '{"region_name":"eu-west-1", "role_arn":"{AWS_ROLE_ARN}"}'
 ```
+- Adding Snowflake connection to Airflow. Replace sections in {} with your own credentials
+```
+docker exec -d airflow_airflow-webserver_1 airflow connections add 'snowflake_default' --conn-type 'snowflake' --conn-login {SNOWFLAKE_USERNAME} --conn-password {SNOWFLAKE_PASSWORD} --conn-schema {SNOWFLAKE_SCHEMA} --conn-account {SNOWFLAKE_ACCOUNT} --conn-extra '{"extra__snowflake__account": "az36725.eu-west-1", "extra__snowflake__aws_access_key_id": "", "extra__snowflake__aws_secret_access_key": "", "extra__snowflake__database": "{SF_DATABASE}", "extra__snowflake__region": "", "extra__snowflake__role": "{SF_ROLE}", "extra__snowflake__warehouse": "{SF_WAREHOUSE}", "private_key_file": "{SF_PRIVATE_KEY_FILE}"}'
+```
+- Connect to [Airflow webserver](http://localhost:8080/) with the default credentials and activate the user_behaviour tag
 
-
-### Current Issues to be fixed
-- EMR cluster does not scale down as intended
-- Pipeline gets all data from user_purchases Postgres table every time. If I find time, queries will be changed to move only a subset of the data.
+### Currently Known Issues
+- Pipeline gets all data from user_purchases Postgres table every time.
 - IAM role and policy Snowflake storage integration created manually while following Snowflake guide, not from Terraform
-- The last step of updating the OLAP table in Snowflake does not work yet. The connection needs to be figured out.
